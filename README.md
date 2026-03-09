@@ -29,6 +29,16 @@ The Phase 1 scope is intentionally narrow:
   - read-model staleness
   - lane boundary behavior
 
+## Documentation
+
+- [Architecture](./docs/architecture.md)
+- [Development](./docs/development.md)
+- [Deployment](./docs/deployment.md)
+- [Operations](./docs/operations.md)
+- [Roadmap](./docs/roadmap.md)
+- [Security Policy](./SECURITY.md)
+- [Contributing](./CONTRIBUTING.md)
+
 ## What It Does Not Include
 
 - multi-user auth or RBAC
@@ -169,6 +179,15 @@ Persistent data is stored in named volumes:
 
 The compose stack exposes the web app on port `3000`.
 For a production VPS, put a reverse proxy such as Caddy or Nginx in front of it and do not expose Postgres publicly.
+
+For the recommended production shape, bind the app to localhost only:
+
+```yaml
+ports:
+  - "127.0.0.1:3000:3000"
+```
+
+and proxy public traffic through a reverse proxy on `80/443`.
 
 ## Repository Hygiene
 
