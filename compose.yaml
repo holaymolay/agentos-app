@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agentos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/agentos}
+      AGENTOS_OWNER_PASSWORD: ${AGENTOS_OWNER_PASSWORD:-change-me-dev-password}
+      AGENTOS_COOKIE_SECRET: ${AGENTOS_COOKIE_SECRET:-change-me-dev-cookie-secret}
+      AGENTOS_HEARTBEAT_INTERVAL_MS: ${AGENTOS_HEARTBEAT_INTERVAL_MS:-2000}
+      AGENTOS_LEASE_DURATION_MS: ${AGENTOS_LEASE_DURATION_MS:-8000}
+      AGENTOS_PROJECTION_LAG_THRESHOLD_MS: ${AGENTOS_PROJECTION_LAG_THRESHOLD_MS:-5000}
+      AGENTOS_PROJECTION_NAME: ${AGENTOS_PROJECTION_NAME:-mission-control}
+      AGENTOS_DATA_DIR: /app/data
+      AGENTOS_ASSISTANT_ID: ${AGENTOS_ASSISTANT_ID:-assistant}
+    volumes:
+      - agentos_data:/app/data
+    ports:
+      - "3000:3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["npm", "run", "start:worker"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/agentos}
+      AGENTOS_OWNER_PASSWORD: ${AGENTOS_OWNER_PASSWORD:-change-me-dev-password}
+      AGENTOS_COOKIE_SECRET: ${AGENTOS_COOKIE_SECRET:-change-me-dev-cookie-secret}
+      AGENTOS_HEARTBEAT_INTERVAL_MS: ${AGENTOS_HEARTBEAT_INTERVAL_MS:-2000}
+      AGENTOS_LEASE_DURATION_MS: ${AGENTOS_LEASE_DURATION_MS:-8000}
+      AGENTOS_PROJECTION_LAG_THRESHOLD_MS: ${AGENTOS_PROJECTION_LAG_THRESHOLD_MS:-5000}
+      AGENTOS_PROJECTION_NAME: ${AGENTOS_PROJECTION_NAME:-mission-control}
+      AGENTOS_DATA_DIR: /app/data
+      AGENTOS_ASSISTANT_ID: ${AGENTOS_ASSISTANT_ID:-assistant}
+    volumes:
+      - agentos_data:/app/data
+
+volumes:
+  postgres_data:
+  agentos_data:

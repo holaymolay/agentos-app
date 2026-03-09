@@ -37,11 +37,27 @@ async function withPgClient<T>(pool: Pool, fn: (client: PoolClient) => Promise<T
   }
 }
 
+async function readMigrationSql(): Promise<string> {
+  const candidates = [
+    path.resolve(process.cwd(), "src/db/migrations/001_initial.sql"),
+    path.resolve(process.cwd(), "dist/src/db/migrations/001_initial.sql"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      return await fs.readFile(candidate, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Could not locate 001_initial.sql in src/ or dist/ migration paths");
+}
+
 export async function runMigrations(databaseUrl: string): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl });
   try {
-    const migrationPath = path.resolve(process.cwd(), "src/db/migrations/001_initial.sql");
-    const sql = await fs.readFile(migrationPath, "utf8");
+    const sql = await readMigrationSql();
     await pool.query(sql);
   } finally {
     await pool.end();

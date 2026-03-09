@@ -4,6 +4,7 @@ data
 .runtime-smoke
 .env
 .env.*
+!.env.example
 coverage
 tmp
 *.log

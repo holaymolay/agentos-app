@@ -122,6 +122,54 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/agentos
 - `npm run start:worker`
   Starts the worker loop from `dist/`.
 
+## Docker
+
+This repo includes:
+- `Dockerfile`
+- `compose.yaml`
+
+The Docker setup is designed for the Phase 1 single-VPS shape:
+- one `web` container
+- one `worker` container
+- one `postgres` container
+
+### Run with Docker Compose
+
+1. Copy the example environment:
+
+```bash
+cp .env.example .env
+```
+
+2. Set real values in `.env`.
+
+3. Start the stack:
+
+```bash
+docker compose up --build -d
+```
+
+4. Check status:
+
+```bash
+docker compose ps
+docker compose logs -f web
+docker compose logs -f worker
+```
+
+5. Stop the stack:
+
+```bash
+docker compose down
+```
+
+Persistent data is stored in named volumes:
+- `postgres_data`
+- `agentos_data`
+
+The compose stack exposes the web app on port `3000`.
+For a production VPS, put a reverse proxy such as Caddy or Nginx in front of it and do not expose Postgres publicly.
+
 ## Repository Hygiene
 
 Ignored by default:
