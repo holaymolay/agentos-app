@@ -1,0 +1,11 @@
+node_modules/
+dist/
+data/
+.runtime-smoke/
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+tmp/
+*.tmp
