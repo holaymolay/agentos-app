@@ -16,7 +16,12 @@ function buildMissionUrl(baseUrl: string | null, missionId: string | null): stri
 }
 
 function isBridgeRoute(url: string): boolean {
-  return url === "/api/bridge/turns" || url === "/api/bridge/approvals" || url.startsWith("/api/bridge/missions/");
+  return (
+    url === "/api/bridge/turns" ||
+    url === "/api/bridge/approvals" ||
+    url === "/api/bridge/overview" ||
+    url.startsWith("/api/bridge/missions/")
+  );
 }
 
 export async function createServer(runtime: AgentOsRuntime) {
@@ -182,6 +187,49 @@ export async function createServer(runtime: AgentOsRuntime) {
         requestedAt: approval.requestedAt,
         status: approval.status,
       })),
+    });
+  });
+
+  app.get("/api/bridge/overview", async (request, reply) => {
+    if (!runtime.authService.isBridgeEnabled()) {
+      reply.code(503).send({ error: "BRIDGE_DISABLED" });
+      return;
+    }
+    if (!runtime.authService.isBridgeAuthenticated(request.headers.authorization)) {
+      reply.code(401).send({ error: "UNAUTHORIZED" });
+      return;
+    }
+
+    const [overviewHealth, missions, approvals] = await Promise.all([
+      runtime.kernel.getOverviewHealth(),
+      runtime.kernel.listMissionSummaries(),
+      runtime.kernel.listApprovalQueue(),
+    ]);
+
+    const countsByStatus = missions.reduce<Record<string, number>>((acc, mission) => {
+      acc[mission.status] = (acc[mission.status] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const recentMissions = [...missions]
+      .sort((left, right) => right.lastUpdatedAt.localeCompare(left.lastUpdatedAt))
+      .slice(0, 5)
+      .map((mission) => ({
+        missionId: mission.missionId,
+        summary: mission.summary,
+        status: mission.status,
+        riskTier: mission.riskTier,
+        operatorActionNeeded: mission.operatorActionNeeded,
+        lastUpdatedAt: mission.lastUpdatedAt,
+        missionUrl: buildMissionUrl(runtime.config.publicBaseUrl, mission.missionId),
+      }));
+
+    reply.send({
+      overviewHealth,
+      missionCount: missions.length,
+      pendingApprovalCount: approvals.length,
+      countsByStatus,
+      recentMissions,
     });
   });
 

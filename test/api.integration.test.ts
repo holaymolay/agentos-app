@@ -221,5 +221,33 @@ describe("api integration", () => {
         },
       ],
     });
+
+    const unauthorizedOverview = await app.inject({
+      method: "GET",
+      url: "/api/bridge/overview",
+    });
+    expect(unauthorizedOverview.statusCode).toBe(401);
+
+    const overview = await app.inject({
+      method: "GET",
+      url: "/api/bridge/overview",
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+    });
+    expect(overview.statusCode).toBe(200);
+    expect(overview.json()).toMatchObject({
+      missionCount: 2,
+      pendingApprovalCount: 1,
+      countsByStatus: {
+        WAITING_APPROVAL: 1,
+      },
+    });
+    expect(overview.json().recentMissions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          missionId: remediationMissionId,
+          missionUrl: expect.stringContaining(`/missions/${remediationMissionId}`),
+        }),
+      ]),
+    );
   });
 });

@@ -116,6 +116,48 @@ Response body:
 }
 ```
 
+### AgentOS overview endpoint
+
+AgentOS exposes a compact read-only overview for bridge clients:
+
+```text
+GET /api/bridge/overview
+Authorization: Bearer <AGENTOS_BRIDGE_TOKEN>
+```
+
+Response body:
+
+```json
+{
+  "overviewHealth": {
+    "activeMissionCount": 1,
+    "blockedApprovalCount": 1,
+    "failedMissionCount": 0,
+    "projectionLagEvents": 0,
+    "projectionLagMs": 0,
+    "isStale": false,
+    "updatedAt": "2026-03-10T07:20:00.000Z"
+  },
+  "missionCount": 2,
+  "pendingApprovalCount": 1,
+  "countsByStatus": {
+    "READY": 1,
+    "WAITING_APPROVAL": 1
+  },
+  "recentMissions": [
+    {
+      "missionId": "mission_x",
+      "summary": "Healthcheck mission for: Run a healthcheck on the runtime.",
+      "status": "WAITING_APPROVAL",
+      "riskTier": "medium",
+      "operatorActionNeeded": true,
+      "lastUpdatedAt": "2026-03-10T07:20:00.000Z",
+      "missionUrl": "https://app.example.com/missions/mission_x"
+    }
+  ]
+}
+```
+
 ### Required environment
 
 Set these on the AgentOS deployment:
@@ -169,6 +211,18 @@ For Telegram, use:
 
 ```text
 /agentos_approvals
+```
+
+The first overview command should:
+
+1. GET `/api/bridge/overview`
+2. summarize projection freshness, mission counts, and pending approvals
+3. show a short recent-missions list with mission URLs
+
+For Telegram, use:
+
+```text
+/agentos_overview
 ```
 
 Do not start with:
