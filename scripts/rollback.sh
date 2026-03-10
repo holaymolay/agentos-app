@@ -32,8 +32,10 @@ ensure_clean_worktree() {
 install_ops_tools() {
   mkdir -p "$OPS_BIN_DIR"
   for tool in backup.sh deploy.sh rollback.sh; do
-    if [[ -f "$SCRIPT_DIR/$tool" ]]; then
-      cp "$SCRIPT_DIR/$tool" "$OPS_BIN_DIR/$tool"
+    local src="$SCRIPT_DIR/$tool"
+    local dest="$OPS_BIN_DIR/$tool"
+    if [[ -f "$src" && "$src" != "$dest" ]]; then
+      cp "$src" "$dest"
       chmod +x "$OPS_BIN_DIR/$tool"
     fi
   done
