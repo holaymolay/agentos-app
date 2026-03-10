@@ -57,6 +57,36 @@ Response body:
 }
 ```
 
+### AgentOS mission status endpoint
+
+AgentOS also exposes a read-only mission lookup for bridge clients:
+
+```text
+GET /api/bridge/missions/:missionId
+Authorization: Bearer <AGENTOS_BRIDGE_TOKEN>
+```
+
+Response body:
+
+```json
+{
+  "missionId": "mission_x",
+  "summary": "Healthcheck mission for: Run a healthcheck on the runtime.",
+  "status": "SUCCEEDED",
+  "riskTier": "medium",
+  "missionUrl": "https://app.example.com/missions/mission_x",
+  "operatorActionNeeded": false,
+  "approvalSummary": [],
+  "artifactSummary": [
+    { "artifactType": "diagnostics_report", "promoted": true }
+  ],
+  "stepSummary": [
+    { "stepKey": "collect_diagnostics", "status": "SUCCEEDED" }
+  ],
+  "failureSummary": null
+}
+```
+
 ### Required environment
 
 Set these on the AgentOS deployment:
@@ -86,6 +116,13 @@ It should:
 2. pass Telegram sender identity as `requestedBy`
 3. relay `reply`
 4. append `missionUrl` when present
+
+The first read-only status command should:
+
+1. parse a mission id or mission URL
+2. GET `/api/bridge/missions/:missionId`
+3. summarize status, approvals, artifacts, and open steps
+4. return the mission URL
 
 Do not start with:
 

@@ -15,6 +15,10 @@ function buildMissionUrl(baseUrl: string | null, missionId: string | null): stri
   return `${baseUrl.replace(/\/$/, "")}/missions/${missionId}`;
 }
 
+function isBridgeRoute(url: string): boolean {
+  return url === "/api/bridge/turns" || url.startsWith("/api/bridge/missions/");
+}
+
 export async function createServer(runtime: AgentOsRuntime) {
   const app = Fastify({ logger: false });
   await app.register(cookie, { secret: runtime.config.cookieSecret });
@@ -37,7 +41,7 @@ export async function createServer(runtime: AgentOsRuntime) {
     if (
       request.url.startsWith("/api/auth/login") ||
       request.url.startsWith("/api/auth/me") ||
-      request.url.startsWith("/api/bridge/turns")
+      isBridgeRoute(request.url)
     ) {
       return;
     }
@@ -110,6 +114,48 @@ export async function createServer(runtime: AgentOsRuntime) {
     reply.send({
       ...result,
       missionUrl: buildMissionUrl(runtime.config.publicBaseUrl, result.missionId),
+    });
+  });
+
+  app.get("/api/bridge/missions/:missionId", async (request, reply) => {
+    if (!runtime.authService.isBridgeEnabled()) {
+      reply.code(503).send({ error: "BRIDGE_DISABLED" });
+      return;
+    }
+    if (!runtime.authService.isBridgeAuthenticated(request.headers.authorization)) {
+      reply.code(401).send({ error: "UNAUTHORIZED" });
+      return;
+    }
+
+    const params = request.params as { missionId: string };
+    const detail = await runtime.kernel.getMissionDetail(params.missionId);
+    if (!detail) {
+      reply.code(404).send({ error: "NOT_FOUND" });
+      return;
+    }
+
+    reply.send({
+      missionId: detail.mission.missionId,
+      summary: detail.mission.summary,
+      status: detail.mission.status,
+      riskTier: detail.mission.riskTier,
+      missionUrl: buildMissionUrl(runtime.config.publicBaseUrl, detail.mission.missionId),
+      operatorActionNeeded: detail.approvals.some((approval) => approval.status === "PENDING"),
+      approvalSummary: detail.approvals.map((approval) => ({
+        approvalRequestId: approval.approvalRequestId,
+        actionSummary: approval.actionSummary,
+        riskTier: approval.riskTier,
+        status: approval.status,
+      })),
+      artifactSummary: detail.artifacts.map((artifact) => ({
+        artifactType: artifact.artifactType,
+        promoted: artifact.promoted,
+      })),
+      stepSummary: detail.steps.map((step) => ({
+        stepKey: step.stepKey,
+        status: step.status,
+      })),
+      failureSummary: detail.failureSummary,
     });
   });
 

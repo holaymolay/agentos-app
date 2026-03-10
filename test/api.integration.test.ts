@@ -160,5 +160,27 @@ describe("api integration", () => {
       lane: "mission",
       missionUrl: expect.stringContaining("/missions/"),
     });
+
+    const missionId = missionTurn.json().missionId as string;
+
+    const unauthorizedDetail = await app.inject({
+      method: "GET",
+      url: `/api/bridge/missions/${missionId}`,
+    });
+    expect(unauthorizedDetail.statusCode).toBe(401);
+
+    const missionDetail = await app.inject({
+      method: "GET",
+      url: `/api/bridge/missions/${missionId}`,
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+    });
+    expect(missionDetail.statusCode).toBe(200);
+    expect(missionDetail.json()).toMatchObject({
+      missionId,
+      status: "READY",
+      missionUrl: expect.stringContaining(`/missions/${missionId}`),
+      artifactSummary: [],
+      operatorActionNeeded: false,
+    });
   });
 });
