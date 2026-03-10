@@ -124,6 +124,12 @@ The first read-only status command should:
 3. summarize status, approvals, artifacts, and open steps
 4. return the mission URL
 
+For Telegram, use an underscore-based command name:
+
+```text
+/agentos_status <mission_id_or_mission_url>
+```
+
 Do not start with:
 
 - transparent interception of every Telegram DM
