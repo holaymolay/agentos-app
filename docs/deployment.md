@@ -24,6 +24,7 @@ The repository includes:
 - `Dockerfile`
 - `compose.yaml`
 - `.env.example`
+- host-level ops scripts under `scripts/`
 
 ## First-Time Setup
 
@@ -54,6 +55,7 @@ docker compose ps
 docker compose logs -f web
 docker compose logs -f worker
 docker compose logs -f postgres
+.agentos-state/bin/check-health.sh
 ```
 
 ## Update
@@ -152,6 +154,7 @@ Minimum checks:
 4. login works
 5. a diagnostics-only healthcheck mission succeeds
 6. an approval-gated remediation mission succeeds
+7. `.agentos-state/bin/check-health.sh` passes
 
 ## Known Phase 1 Limits
 

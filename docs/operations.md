@@ -32,6 +32,13 @@ cd /opt/agentos-app
 docker compose down
 ```
 
+Host-level health check:
+
+```bash
+cd /opt/agentos-app
+AGENTOS_PUBLIC_HEALTH_URL=https://app.rogerroger.ai/api/auth/me .agentos-state/bin/check-health.sh
+```
+
 ## What Healthy Looks Like
 
 - reverse proxy returns `200` for the app
@@ -224,9 +231,23 @@ That avoids getting stranded if you roll back to an older commit that predates o
 
 ## Monitoring
 
-Not formalized yet.
+Minimum built-in monitoring is now:
 
-Minimum reasonable future coverage:
+- Docker health status for the `web` container
+- a host-level health script:
+
+```bash
+cd /opt/agentos-app
+AGENTOS_PUBLIC_HEALTH_URL=https://your-domain.example/api/auth/me .agentos-state/bin/check-health.sh
+```
+
+The script verifies:
+
+- `postgres`, `web`, and `worker` are running
+- local app health responds on `127.0.0.1:3000`
+- public health responds over HTTPS if `AGENTOS_PUBLIC_HEALTH_URL` is set
+
+Still recommended later:
 
 - external HTTPS uptime check
 - alert on repeated container restarts

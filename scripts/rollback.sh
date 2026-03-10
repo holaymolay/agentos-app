@@ -31,7 +31,7 @@ ensure_clean_worktree() {
 
 install_ops_tools() {
   mkdir -p "$OPS_BIN_DIR"
-  for tool in backup.sh deploy.sh rollback.sh; do
+  for tool in backup.sh deploy.sh rollback.sh check-health.sh; do
     local src="$SCRIPT_DIR/$tool"
     local dest="$OPS_BIN_DIR/$tool"
     if [[ -f "$src" && "$src" != "$dest" ]]; then
