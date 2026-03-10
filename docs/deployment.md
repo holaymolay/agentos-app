@@ -59,9 +59,34 @@ docker compose logs -f postgres
 ## Update
 
 ```bash
-git pull
-docker compose up --build -d
-docker compose ps
+./scripts/deploy.sh
+```
+
+The deploy script:
+
+- takes a local backup first by default
+- records the previously deployed commit
+- fast-forwards `main` from `origin/main`
+- rebuilds the Compose stack
+
+You can target a specific commit or tag:
+
+```bash
+./scripts/deploy.sh <git-ref>
+```
+
+## Rollback
+
+```bash
+./scripts/rollback.sh
+```
+
+This rolls back to the previously recorded deployed commit.
+
+You can also roll back to an explicit commit or tag:
+
+```bash
+./scripts/rollback.sh <git-ref>
 ```
 
 ## Stop

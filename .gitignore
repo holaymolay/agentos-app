@@ -10,3 +10,4 @@ coverage/
 tmp/
 *.tmp
 backups/
+.agentos-state/

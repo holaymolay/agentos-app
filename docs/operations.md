@@ -22,9 +22,7 @@ Rebuild and restart:
 
 ```bash
 cd /opt/agentos-app
-git pull
-docker compose up --build -d
-docker compose ps
+./scripts/deploy.sh
 ```
 
 Stop:
@@ -159,16 +157,56 @@ Before restoring in anger, create one fresh backup of the current state so you h
 
 ## Rollback
 
-Not formalized yet.
+The repository now includes a simple rollback path:
 
-Current practical rollback is:
+```bash
+cd /opt/agentos-app
+./scripts/rollback.sh
+```
 
-1. identify the last known-good Git commit
-2. check it out on the server
-3. rebuild containers
-4. confirm health
+Default behavior:
 
-This should be replaced by a documented rollback procedure and, later, image pinning.
+- reads the previous deployed commit from `.agentos-state/previous-deploy.txt`
+- checks out that commit
+- rebuilds the stack
+- prints container status
+
+You can also roll back to an explicit commit or tag:
+
+```bash
+./scripts/rollback.sh <git-ref>
+```
+
+## Controlled Deploys
+
+Use the deploy script instead of ad hoc `git pull` plus rebuilds:
+
+```bash
+cd /opt/agentos-app
+./scripts/deploy.sh
+```
+
+Default behavior:
+
+- refuses to run if the repo has tracked local changes
+- records the previously deployed commit
+- runs `./scripts/backup.sh` first
+- fast-forwards `main` from `origin/main`
+- rebuilds and starts the stack
+
+You can deploy an explicit commit or tag:
+
+```bash
+./scripts/deploy.sh <git-ref>
+```
+
+If you absolutely need to skip the pre-deploy backup, set:
+
+```bash
+AGENTOS_SKIP_BACKUP=1 ./scripts/deploy.sh
+```
+
+Do not make a habit of skipping backups.
 
 ## Monitoring
 
