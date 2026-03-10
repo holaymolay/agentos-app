@@ -46,6 +46,16 @@ describe("kernel + worker integration", () => {
     expect(detail?.approvals).toHaveLength(0);
     expect(detail?.artifacts.map((artifact) => artifact.artifactType)).toEqual(["diagnostics_report"]);
     expect(detail?.artifacts[0]?.promoted).toBe(true);
+    expect(detail?.steps.map((step) => [step.stepKey, step.status])).toEqual([
+      ["collect_diagnostics", "SUCCEEDED"],
+      ["emit_diagnostics_report", "SUCCEEDED"],
+      ["needs_remediation", "SUCCEEDED"],
+      ["approval_gate_remediation", "SKIPPED"],
+      ["apply_remediation", "SKIPPED"],
+      ["emit_remediation_report", "SKIPPED"],
+      ["finish", "SUCCEEDED"],
+    ]);
+    expect(detail?.events.some((event) => event.eventType === "STEP_SKIPPED")).toBe(true);
   });
 
   it("handles approved remediation end-to-end", async () => {
@@ -80,5 +90,14 @@ describe("kernel + worker integration", () => {
     expect(detail?.artifacts).toHaveLength(1);
     expect(detail?.artifacts[0]?.artifactType).toBe("diagnostics_report");
     expect(detail?.approvals[0]?.status).toBe("DENIED");
+    expect(detail?.steps.map((step) => [step.stepKey, step.status])).toEqual([
+      ["collect_diagnostics", "SUCCEEDED"],
+      ["emit_diagnostics_report", "SUCCEEDED"],
+      ["needs_remediation", "SUCCEEDED"],
+      ["approval_gate_remediation", "SUCCEEDED"],
+      ["apply_remediation", "SKIPPED"],
+      ["emit_remediation_report", "SKIPPED"],
+      ["finish", "SUCCEEDED"],
+    ]);
   });
 });

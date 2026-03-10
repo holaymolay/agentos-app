@@ -599,6 +599,13 @@ export class AgentOsKernel implements KernelReadApi {
           if (needsRemediation) {
             await this.enterApprovalWait(tx, updatedMission, receipt.finishedAt);
           } else {
+            await this.skipStepsByKey(
+              tx,
+              updatedMission,
+              ["approval_gate_remediation", "apply_remediation", "emit_remediation_report"],
+              "remediation_not_needed",
+              receipt.finishedAt,
+            );
             await this.readyStepByKey(tx, updatedMission, "finish", receipt.finishedAt);
           }
           break;
@@ -722,6 +729,13 @@ export class AgentOsKernel implements KernelReadApi {
             nowIso,
           ),
         );
+        await this.skipStepsByKey(
+          tx,
+          updatedMission,
+          ["apply_remediation", "emit_remediation_report"],
+          "approval_denied",
+          nowIso,
+        );
         await this.readyStepByKey(tx, updatedMission, "finish", nowIso);
       }
 
@@ -842,6 +856,41 @@ export class AgentOsKernel implements KernelReadApi {
         nowIso,
       ),
     );
+  }
+
+  private async skipStepsByKey(
+    tx: PersistenceTx,
+    mission: Mission,
+    stepKeys: string[],
+    reason: string,
+    nowIso: string,
+  ): Promise<void> {
+    for (const stepKey of stepKeys) {
+      const step = await tx.getMissionStepByKey(mission.missionId, stepKey);
+      if (!step || step.status !== "PENDING") {
+        continue;
+      }
+      const skippedStep: MissionStep = {
+        ...step,
+        status: "SKIPPED",
+        availableAt: nowIso,
+        updatedAt: nowIso,
+      };
+      await tx.saveMissionStep(skippedStep);
+      await tx.appendEvent(
+        createEvent(
+          "STEP_SKIPPED",
+          mission.missionId,
+          step.stepId,
+          "kernel",
+          "kernel",
+          "authoritative",
+          { stepKey, reason },
+          `step-skipped:${step.stepId}:${reason}`,
+          nowIso,
+        ),
+      );
+    }
   }
 
   private async enterApprovalWait(tx: PersistenceTx, mission: Mission, nowIso: string): Promise<void> {
