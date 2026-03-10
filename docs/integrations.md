@@ -87,6 +87,35 @@ Response body:
 }
 ```
 
+### AgentOS approval queue endpoint
+
+AgentOS exposes a read-only approval queue for bridge clients:
+
+```text
+GET /api/bridge/approvals
+Authorization: Bearer <AGENTOS_BRIDGE_TOKEN>
+```
+
+Response body:
+
+```json
+{
+  "count": 1,
+  "approvals": [
+    {
+      "approvalRequestId": "approval_x",
+      "missionId": "mission_x",
+      "missionUrl": "https://app.example.com/missions/mission_x",
+      "requestedAction": "Apply healthcheck remediation",
+      "rationale": "Diagnostics indicate remediation is required before the mission can finish cleanly.",
+      "riskTier": "medium",
+      "requestedAt": "2026-03-10T07:20:00.000Z",
+      "status": "PENDING"
+    }
+  ]
+}
+```
+
 ### Required environment
 
 Set these on the AgentOS deployment:
@@ -128,6 +157,18 @@ For Telegram, use an underscore-based command name:
 
 ```text
 /agentos_status <mission_id_or_mission_url>
+```
+
+The first approval queue command should:
+
+1. GET `/api/bridge/approvals`
+2. summarize pending approvals concisely
+3. include mission URLs when available
+
+For Telegram, use:
+
+```text
+/agentos_approvals
 ```
 
 Do not start with:

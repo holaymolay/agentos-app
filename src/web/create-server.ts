@@ -16,7 +16,7 @@ function buildMissionUrl(baseUrl: string | null, missionId: string | null): stri
 }
 
 function isBridgeRoute(url: string): boolean {
-  return url === "/api/bridge/turns" || url.startsWith("/api/bridge/missions/");
+  return url === "/api/bridge/turns" || url === "/api/bridge/approvals" || url.startsWith("/api/bridge/missions/");
 }
 
 export async function createServer(runtime: AgentOsRuntime) {
@@ -156,6 +156,32 @@ export async function createServer(runtime: AgentOsRuntime) {
         status: step.status,
       })),
       failureSummary: detail.failureSummary,
+    });
+  });
+
+  app.get("/api/bridge/approvals", async (request, reply) => {
+    if (!runtime.authService.isBridgeEnabled()) {
+      reply.code(503).send({ error: "BRIDGE_DISABLED" });
+      return;
+    }
+    if (!runtime.authService.isBridgeAuthenticated(request.headers.authorization)) {
+      reply.code(401).send({ error: "UNAUTHORIZED" });
+      return;
+    }
+
+    const approvals = await runtime.kernel.listApprovalQueue();
+    reply.send({
+      count: approvals.length,
+      approvals: approvals.map((approval) => ({
+        approvalRequestId: approval.approvalRequestId,
+        missionId: approval.missionId,
+        missionUrl: buildMissionUrl(runtime.config.publicBaseUrl, approval.missionId),
+        requestedAction: approval.requestedAction,
+        rationale: approval.rationale,
+        riskTier: approval.riskTier,
+        requestedAt: approval.requestedAt,
+        status: approval.status,
+      })),
     });
   });
 

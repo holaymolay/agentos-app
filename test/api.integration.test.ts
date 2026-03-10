@@ -182,5 +182,44 @@ describe("api integration", () => {
       artifactSummary: [],
       operatorActionNeeded: false,
     });
+
+    const remediationTurn = await app.inject({
+      method: "POST",
+      url: "/api/bridge/turns",
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+      payload: {
+        content: "Run a healthcheck on the runtime.",
+        requestedBy: "telegram:1348625485",
+        interfaceChannel: "telegram",
+        missionInput: { forceRemediation: true },
+      },
+    });
+    const remediationMissionId = remediationTurn.json().missionId as string;
+    await processUntilApproval(runtime, remediationMissionId);
+
+    const unauthorizedApprovals = await app.inject({
+      method: "GET",
+      url: "/api/bridge/approvals",
+    });
+    expect(unauthorizedApprovals.statusCode).toBe(401);
+
+    const approvalQueue = await app.inject({
+      method: "GET",
+      url: "/api/bridge/approvals",
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+    });
+    expect(approvalQueue.statusCode).toBe(200);
+    expect(approvalQueue.json()).toMatchObject({
+      count: 1,
+      approvals: [
+        {
+          missionId: remediationMissionId,
+          missionUrl: expect.stringContaining(`/missions/${remediationMissionId}`),
+          requestedAction: "Apply healthcheck remediation",
+          riskTier: "medium",
+          status: "PENDING",
+        },
+      ],
+    });
   });
 });
