@@ -8,6 +8,13 @@ import type { ApprovalDecision, HealthcheckMissionInput } from "../shared/types.
 
 const approvalDecisions = new Set<ApprovalDecision>(["approve", "deny"]);
 
+function buildMissionUrl(baseUrl: string | null, missionId: string | null): string | null {
+  if (!baseUrl || !missionId) {
+    return null;
+  }
+  return `${baseUrl.replace(/\/$/, "")}/missions/${missionId}`;
+}
+
 export async function createServer(runtime: AgentOsRuntime) {
   const app = Fastify({ logger: false });
   await app.register(cookie, { secret: runtime.config.cookieSecret });
@@ -27,7 +34,11 @@ export async function createServer(runtime: AgentOsRuntime) {
   });
 
   app.addHook("preHandler", async (request, reply) => {
-    if (request.url.startsWith("/api/auth/login") || request.url.startsWith("/api/auth/me")) {
+    if (
+      request.url.startsWith("/api/auth/login") ||
+      request.url.startsWith("/api/auth/me") ||
+      request.url.startsWith("/api/bridge/turns")
+    ) {
       return;
     }
     if (!request.url.startsWith("/api")) {
@@ -65,6 +76,41 @@ export async function createServer(runtime: AgentOsRuntime) {
       missionInput: body.missionInput,
     });
     reply.send(result);
+  });
+
+  app.post("/api/bridge/turns", async (request, reply) => {
+    if (!runtime.authService.isBridgeEnabled()) {
+      reply.code(503).send({ error: "BRIDGE_DISABLED" });
+      return;
+    }
+    if (!runtime.authService.isBridgeAuthenticated(request.headers.authorization)) {
+      reply.code(401).send({ error: "UNAUTHORIZED" });
+      return;
+    }
+
+    const body = (request.body ?? {}) as {
+      content?: string;
+      requestedBy?: string;
+      interfaceChannel?: string;
+      missionInput?: HealthcheckMissionInput;
+    };
+
+    if (!body.content?.trim()) {
+      reply.code(400).send({ error: "CONTENT_REQUIRED" });
+      return;
+    }
+
+    const result = await runtime.assistantService.submitUserTurn({
+      content: body.content,
+      requestedBy: body.requestedBy?.trim() || "bridge",
+      interfaceChannel: body.interfaceChannel?.trim() || "bridge",
+      missionInput: body.missionInput,
+    });
+
+    reply.send({
+      ...result,
+      missionUrl: buildMissionUrl(runtime.config.publicBaseUrl, result.missionId),
+    });
   });
 
   app.get("/api/missions", async () => runtime.kernel.listMissionSummaries());

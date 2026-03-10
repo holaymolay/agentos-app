@@ -314,6 +314,8 @@ export interface AppConfig {
   databaseUrl: string | null;
   ownerPassword: string;
   cookieSecret: string;
+  bridgeToken: string | null;
+  publicBaseUrl: string | null;
   heartbeatIntervalMs: number;
   leaseDurationMs: number;
   projectionLagThresholdMs: number;

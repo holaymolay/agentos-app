@@ -29,7 +29,7 @@ export async function createInMemoryRuntime(overrides: Partial<AppConfig> = {}):
     config,
     kernel,
     assistantService: new AssistantService(kernel),
-    authService: new AuthService(config.ownerPassword),
+    authService: new AuthService(config.ownerPassword, config.bridgeToken),
     worker: new AgentWorker(kernel, new LocalExecutionAdapter(), config),
     shutdown: async () => {},
   };
@@ -49,7 +49,7 @@ export async function createPostgresRuntime(config: AppConfig, pool?: Pool): Pro
     config,
     kernel,
     assistantService: new AssistantService(kernel),
-    authService: new AuthService(config.ownerPassword),
+    authService: new AuthService(config.ownerPassword, config.bridgeToken),
     worker: new AgentWorker(kernel, new LocalExecutionAdapter(), config),
     shutdown: async () => {
       await runtimePool.end();

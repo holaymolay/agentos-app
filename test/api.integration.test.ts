@@ -112,4 +112,53 @@ describe("api integration", () => {
     });
     expect(workerRoute.statusCode).toBe(404);
   });
+
+  it("accepts machine-auth bridge turns and returns mission URLs when configured", async () => {
+    const runtime = await createTestRuntime({
+      bridgeToken: "dev-bridge-token-123456",
+      publicBaseUrl: "https://app.rogerroger.ai",
+    });
+    const app = await createTestServer(runtime);
+    closeServer = () => app.close();
+
+    const unauthorized = await app.inject({
+      method: "POST",
+      url: "/api/bridge/turns",
+      payload: { content: "Explain the lane boundary." },
+    });
+    expect(unauthorized.statusCode).toBe(401);
+
+    const chatTurn = await app.inject({
+      method: "POST",
+      url: "/api/bridge/turns",
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+      payload: {
+        content: "Explain the lane boundary.",
+        requestedBy: "telegram:1348625485",
+        interfaceChannel: "telegram",
+      },
+    });
+    expect(chatTurn.statusCode).toBe(200);
+    expect(chatTurn.json()).toMatchObject({
+      lane: "chat",
+      missionId: null,
+      missionUrl: null,
+    });
+
+    const missionTurn = await app.inject({
+      method: "POST",
+      url: "/api/bridge/turns",
+      headers: { authorization: "Bearer dev-bridge-token-123456" },
+      payload: {
+        content: "Run a healthcheck on the runtime.",
+        requestedBy: "telegram:1348625485",
+        interfaceChannel: "telegram",
+      },
+    });
+    expect(missionTurn.statusCode).toBe(200);
+    expect(missionTurn.json()).toMatchObject({
+      lane: "mission",
+      missionUrl: expect.stringContaining("/missions/"),
+    });
+  });
 });

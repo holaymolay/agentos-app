@@ -4,12 +4,13 @@ import path from "node:path";
 import { createPostgresPool, runMigrations } from "../src/db/postgres.js";
 import { createInMemoryRuntime, createPostgresRuntime, type AgentOsRuntime } from "../src/bootstrap.js";
 import { loadConfig } from "../src/config.js";
+import type { AppConfig } from "../src/shared/types.js";
 import { createServer } from "../src/web/create-server.js";
 
 let preparedDatabaseUrl: string | null = null;
 let preparePromise: Promise<void> | null = null;
 
-export async function createTestRuntime(): Promise<AgentOsRuntime> {
+export async function createTestRuntime(overrides: Partial<AppConfig> = {}): Promise<AgentOsRuntime> {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "agentos-test-"));
   return createInMemoryRuntime({
     dataDir,
@@ -17,6 +18,7 @@ export async function createTestRuntime(): Promise<AgentOsRuntime> {
     ownerPassword: "dev-test-password",
     cookieSecret: "dev-test-cookie-secret-123456",
     projectionLagThresholdMs: 1,
+    ...overrides,
   });
 }
 

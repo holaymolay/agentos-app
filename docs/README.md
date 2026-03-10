@@ -3,6 +3,7 @@
 - [Architecture](./architecture.md)
 - [Development](./development.md)
 - [Deployment](./deployment.md)
+- [Integrations](./integrations.md)
 - [Operations](./operations.md)
 - [Roadmap](./roadmap.md)
 
