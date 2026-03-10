@@ -87,7 +87,7 @@ ports:
   - "127.0.0.1:3000:3000"
 ```
 
-This keeps the app private behind the reverse proxy.
+This is the repository default. It keeps the app private behind the reverse proxy.
 
 ## Persistence
 
@@ -97,6 +97,24 @@ The Compose stack uses named volumes:
 - `agentos_data`
 
 These must be covered by backup planning.
+
+## Backup Workflow
+
+The repo includes a local backup script for the current single-VPS deployment shape:
+
+```bash
+./scripts/backup.sh
+```
+
+The script captures:
+
+- a Postgres dump
+- the `agentos_data` volume contents
+- the local `.env`
+
+Backups are written to `./backups/<UTC_TIMESTAMP>/` by default.
+
+That is not enough by itself. You still need to copy each backup off the VPS if you want real disaster recovery.
 
 ## Post-Deploy Validation
 
@@ -115,4 +133,4 @@ Minimum checks:
 - no external channel integrations
 - no horizontal scaling
 - no separated worker host
-- no production backup automation yet
+- no off-host backup automation yet

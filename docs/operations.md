@@ -84,20 +84,78 @@ The default healthcheck path usually completes without approval.
 
 The next operational improvements should be:
 
-1. backup automation
+1. off-host backup automation
 2. rollback procedure
 3. minimal uptime / container-health monitoring
 
 ## Backups
 
-Not automated yet.
+The repository now includes a local backup script:
+
+```bash
+cd /opt/agentos-app
+./scripts/backup.sh
+```
+
+By default it creates a timestamped backup directory under:
+
+```text
+./backups/<UTC_TIMESTAMP>/
+```
+
+Each backup includes:
+
+- `postgres.dump`
+- `agentos-data.tgz`
+- `.env`
+- `SHA256SUMS`
+- basic metadata such as `manifest.txt` and `compose.ps.txt`
+
+You can choose a different output root:
+
+```bash
+BACKUP_ROOT=/srv/agentos-backups ./scripts/backup.sh
+```
 
 At minimum, backup:
 
 - Postgres data
+- `agentos_data` artifact volume
 - `.env`
 
 Do not store `.env` in Git.
+
+A same-host backup is only an operational convenience. It is not disaster recovery.
+
+After each backup, copy the backup directory off-host to a password-protected system or object store you control.
+
+## Restore Basics
+
+Restore is destructive. Treat it like an incident action, not a casual command.
+
+Minimum safe sequence:
+
+1. stop the app containers so nothing is writing during restore
+2. restore artifact data
+3. restore the database dump
+4. restart the stack
+5. validate login, Overview, Approvals, and one governed mission path
+
+Example restore flow:
+
+```bash
+cd /opt/agentos-app
+docker compose stop web worker
+docker compose run --rm --no-deps web sh -lc 'find /app/data -mindepth 1 -maxdepth 1 -exec rm -rf {} +'
+cat backups/20260309T000000Z/agentos-data.tgz | docker compose run --rm --no-deps web sh -lc 'tar -xzf - -C /app'
+cat backups/20260309T000000Z/postgres.dump | docker compose exec -T postgres sh -lc 'pg_restore -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" --clean --if-exists --no-owner'
+docker compose up -d
+docker compose ps
+```
+
+If you need to restore the application secrets too, replace `.env` manually from the backup before starting the stack again.
+
+Before restoring in anger, create one fresh backup of the current state so you have a rollback point.
 
 ## Rollback
 

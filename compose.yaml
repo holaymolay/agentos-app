@@ -35,7 +35,7 @@ services:
     volumes:
       - agentos_data:/app/data
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   worker:
     build:
