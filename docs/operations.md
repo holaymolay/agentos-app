@@ -161,7 +161,7 @@ The repository now includes a simple rollback path:
 
 ```bash
 cd /opt/agentos-app
-./scripts/rollback.sh
+.agentos-state/bin/rollback.sh
 ```
 
 Default behavior:
@@ -170,11 +170,12 @@ Default behavior:
 - checks out that commit
 - rebuilds the stack
 - prints container status
+- refreshes stable helper copies under `.agentos-state/bin`
 
 You can also roll back to an explicit commit or tag:
 
 ```bash
-./scripts/rollback.sh <git-ref>
+.agentos-state/bin/rollback.sh <git-ref>
 ```
 
 ## Controlled Deploys
@@ -183,7 +184,7 @@ Use the deploy script instead of ad hoc `git pull` plus rebuilds:
 
 ```bash
 cd /opt/agentos-app
-./scripts/deploy.sh
+.agentos-state/bin/deploy.sh
 ```
 
 Default behavior:
@@ -193,20 +194,33 @@ Default behavior:
 - runs `./scripts/backup.sh` first
 - fast-forwards `main` from `origin/main`
 - rebuilds and starts the stack
+- refreshes stable helper copies under `.agentos-state/bin`
 
 You can deploy an explicit commit or tag:
 
 ```bash
-./scripts/deploy.sh <git-ref>
+.agentos-state/bin/deploy.sh <git-ref>
 ```
 
 If you absolutely need to skip the pre-deploy backup, set:
 
 ```bash
-AGENTOS_SKIP_BACKUP=1 ./scripts/deploy.sh
+AGENTOS_SKIP_BACKUP=1 .agentos-state/bin/deploy.sh
 ```
 
 Do not make a habit of skipping backups.
+
+## Stable Helper Location
+
+The scripts under `./scripts/` are the source copies tracked in Git.
+
+For live VPS operations, use the stable copied helpers under:
+
+```text
+.agentos-state/bin/
+```
+
+That avoids getting stranded if you roll back to an older commit that predates one of the helper scripts.
 
 ## Monitoring
 

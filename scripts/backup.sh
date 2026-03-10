@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if git -C "$SCRIPT_DIR" rev-parse --show-toplevel >/dev/null 2>&1; then
+  PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
 BACKUP_ROOT="${1:-${BACKUP_ROOT:-$PROJECT_ROOT/backups}}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP"

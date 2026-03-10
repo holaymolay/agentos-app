@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if git -C "$SCRIPT_DIR" rev-parse --show-toplevel >/dev/null 2>&1; then
+  PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
 cd "$PROJECT_ROOT"
 
 STATE_DIR="$PROJECT_ROOT/.agentos-state"
+OPS_BIN_DIR="$STATE_DIR/bin"
 TARGET_REF="${1:-origin/main}"
 COMPOSE=(docker compose)
 
@@ -23,6 +29,16 @@ ensure_clean_worktree() {
   fi
 }
 
+install_ops_tools() {
+  mkdir -p "$OPS_BIN_DIR"
+  for tool in backup.sh deploy.sh rollback.sh; do
+    if [[ -f "$SCRIPT_DIR/$tool" ]]; then
+      cp "$SCRIPT_DIR/$tool" "$OPS_BIN_DIR/$tool"
+      chmod +x "$OPS_BIN_DIR/$tool"
+    fi
+  done
+}
+
 require_cmd git
 require_cmd docker
 
@@ -33,12 +49,13 @@ fi
 
 ensure_clean_worktree
 mkdir -p "$STATE_DIR"
+install_ops_tools
 
 PREVIOUS_COMMIT="$(git rev-parse HEAD)"
 echo "$PREVIOUS_COMMIT" > "$STATE_DIR/previous-deploy.txt"
 
 if [[ "${AGENTOS_SKIP_BACKUP:-0}" != "1" ]]; then
-  "$PROJECT_ROOT/scripts/backup.sh"
+  "$OPS_BIN_DIR/backup.sh"
 fi
 
 git fetch origin --tags

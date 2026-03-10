@@ -59,7 +59,7 @@ docker compose logs -f postgres
 ## Update
 
 ```bash
-./scripts/deploy.sh
+.agentos-state/bin/deploy.sh
 ```
 
 The deploy script:
@@ -68,17 +68,18 @@ The deploy script:
 - records the previously deployed commit
 - fast-forwards `main` from `origin/main`
 - rebuilds the Compose stack
+- refreshes stable helper copies in `.agentos-state/bin`
 
 You can target a specific commit or tag:
 
 ```bash
-./scripts/deploy.sh <git-ref>
+.agentos-state/bin/deploy.sh <git-ref>
 ```
 
 ## Rollback
 
 ```bash
-./scripts/rollback.sh
+.agentos-state/bin/rollback.sh
 ```
 
 This rolls back to the previously recorded deployed commit.
@@ -86,7 +87,7 @@ This rolls back to the previously recorded deployed commit.
 You can also roll back to an explicit commit or tag:
 
 ```bash
-./scripts/rollback.sh <git-ref>
+.agentos-state/bin/rollback.sh <git-ref>
 ```
 
 ## Stop
@@ -128,7 +129,7 @@ These must be covered by backup planning.
 The repo includes a local backup script for the current single-VPS deployment shape:
 
 ```bash
-./scripts/backup.sh
+.agentos-state/bin/backup.sh
 ```
 
 The script captures:
