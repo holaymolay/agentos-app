@@ -14,7 +14,7 @@ describe("kernel + worker integration", () => {
     expect(result.missionId).toBeNull();
     expect(await runtime.kernel.listMissionSummaries()).toHaveLength(0);
     const conversation = await runtime.kernel.getRecentConversationMessages(10);
-    expect(conversation.at(-1)?.content).toContain("Chat lane response:");
+    expect(conversation.findLast((message) => message.role === "assistant")?.content).toBe(result.reply);
   });
 
   it("creates the governed healthcheck mission with the expected step graph", async () => {

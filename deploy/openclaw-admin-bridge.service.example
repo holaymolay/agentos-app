@@ -1,0 +1,17 @@
+[Unit]
+Description=AgentOS OpenClaw Admin Bridge
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/agentos-app
+Environment=AGENTOS_OPENCLAW_ADMIN_BRIDGE_BIND=127.0.0.1
+Environment=AGENTOS_OPENCLAW_ADMIN_BRIDGE_PORT=19401
+Environment=AGENTOS_OPENCLAW_ADMIN_BRIDGE_TOKEN=change-me-openclaw-admin-token
+Environment=AGENTOS_OPENCLAW_SYSTEMD_UNIT=openclaw-gateway.service
+ExecStart=/usr/bin/node /opt/agentos-app/dist/src/main-openclaw-admin-bridge.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

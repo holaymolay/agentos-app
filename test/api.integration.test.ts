@@ -1,12 +1,20 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { createTestRuntime, createTestServer, processUntilApproval } from "./test-helpers.js";
+import type { OpenClawAdminBridgeStatus } from "../src/shared/types.js";
 
 let closeServer: (() => Promise<void>) | null = null;
+let closeBridgeServer: (() => Promise<void>) | null = null;
 
 afterEach(async () => {
   if (closeServer) {
     await closeServer();
     closeServer = null;
+  }
+  if (closeBridgeServer) {
+    await closeBridgeServer();
+    closeBridgeServer = null;
   }
 });
 
@@ -249,5 +257,119 @@ describe("api integration", () => {
         }),
       ]),
     );
+  });
+
+  it("surfaces OpenClaw service status and controls through the owner API", async () => {
+    const bridgeState: OpenClawAdminBridgeStatus = {
+      serviceName: "openclaw-gateway.service",
+      activeState: "active",
+      subState: "running",
+      unitFileState: "enabled",
+      mainPid: 482_906,
+      startedAt: "Thu 2026-03-12 10:00:00 UTC",
+      fragmentPath: "/home/molay/.config/systemd/user/openclaw-gateway.service",
+    };
+
+    const bridge = createServer((request, reply) => {
+      if (request.headers.authorization !== "Bearer dev-openclaw-admin-token") {
+        reply.statusCode = 401;
+        reply.end(JSON.stringify({ error: "UNAUTHORIZED" }));
+        return;
+      }
+
+      if (request.method === "GET" && request.url === "/status") {
+        reply.setHeader("Content-Type", "application/json");
+        reply.end(JSON.stringify(bridgeState));
+        return;
+      }
+
+      const action = request.url?.match(/^\/actions\/(start|stop|restart)$/)?.[1];
+      if (request.method === "POST" && action) {
+        if (action === "stop") {
+          bridgeState.activeState = "inactive";
+          bridgeState.subState = "dead";
+          bridgeState.mainPid = null;
+        } else {
+          bridgeState.activeState = "active";
+          bridgeState.subState = "running";
+          bridgeState.mainPid = 900_001;
+        }
+        reply.setHeader("Content-Type", "application/json");
+        reply.end(JSON.stringify(bridgeState));
+        return;
+      }
+
+      reply.statusCode = 404;
+      reply.end(JSON.stringify({ error: "NOT_FOUND" }));
+    });
+
+    await new Promise<void>((resolve) => bridge.listen(0, "127.0.0.1", resolve));
+    closeBridgeServer = async () => {
+      await new Promise<void>((resolve, reject) => bridge.close((error) => (error ? reject(error) : resolve())));
+    };
+    const address = bridge.address() as AddressInfo;
+
+    const runtime = await createTestRuntime({
+      openClawAdminUrl: `http://127.0.0.1:${address.port}`,
+      openClawAdminToken: "dev-openclaw-admin-token",
+      openClawDashboardUrl: "https://roger.example.com",
+    });
+    const app = await createTestServer(runtime);
+    closeServer = () => app.close();
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { password: "dev-test-password" },
+    });
+    const cookie = login.cookies.find((item) => item.name === "agentos_session");
+
+    const status = await app.inject({
+      method: "GET",
+      url: "/api/openclaw/status",
+      headers: { cookie: `agentos_session=${cookie?.value}` },
+    });
+    expect(status.statusCode).toBe(200);
+    expect(status.json()).toMatchObject({
+      configured: true,
+      serviceName: "openclaw-gateway.service",
+      activeState: "active",
+      subState: "running",
+      dashboardUrl: "https://roger.example.com",
+    });
+
+    const restart = await app.inject({
+      method: "POST",
+      url: "/api/openclaw/restart",
+      headers: { cookie: `agentos_session=${cookie?.value}` },
+    });
+    expect(restart.statusCode).toBe(200);
+    expect(restart.json()).toMatchObject({
+      configured: true,
+      activeState: "active",
+      subState: "running",
+      mainPid: 900_001,
+    });
+
+    const stop = await app.inject({
+      method: "POST",
+      url: "/api/openclaw/stop",
+      headers: { cookie: `agentos_session=${cookie?.value}` },
+    });
+    expect(stop.statusCode).toBe(200);
+    expect(stop.json()).toMatchObject({
+      configured: true,
+      activeState: "inactive",
+      subState: "dead",
+      mainPid: null,
+    });
+
+    const invalidAction = await app.inject({
+      method: "POST",
+      url: "/api/openclaw/reload",
+      headers: { cookie: `agentos_session=${cookie?.value}` },
+    });
+    expect(invalidAction.statusCode).toBe(400);
+    expect(invalidAction.json().error).toBe("INVALID_ACTION");
   });
 });

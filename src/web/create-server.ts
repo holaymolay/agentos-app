@@ -4,9 +4,10 @@ import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
 import type { AgentOsRuntime } from "../bootstrap.js";
-import type { ApprovalDecision, HealthcheckMissionInput } from "../shared/types.js";
+import type { ApprovalDecision, HealthcheckMissionInput, OpenClawServiceAction } from "../shared/types.js";
 
 const approvalDecisions = new Set<ApprovalDecision>(["approve", "deny"]);
+const openClawActions = new Set<OpenClawServiceAction>(["start", "stop", "restart"]);
 
 function buildMissionUrl(baseUrl: string | null, missionId: string | null): string | null {
   if (!baseUrl || !missionId) {
@@ -274,6 +275,33 @@ export async function createServer(runtime: AgentOsRuntime) {
       runtime.kernel.listApprovalQueue(),
     ]);
     return { overviewHealth, missions, approvals };
+  });
+
+  app.get("/api/openclaw/status", async (request, reply) => {
+    try {
+      reply.send(await runtime.openClawAdminService.getStatus());
+    } catch (error) {
+      reply.code(502).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post("/api/openclaw/:action", async (request, reply) => {
+    const params = request.params as { action: string };
+    if (!openClawActions.has(params.action as OpenClawServiceAction)) {
+      reply.code(400).send({ error: "INVALID_ACTION" });
+      return;
+    }
+
+    try {
+      const status = await runtime.openClawAdminService.performAction(params.action as OpenClawServiceAction);
+      reply.send(status);
+    } catch (error) {
+      if (error instanceof Error && error.message === "OPENCLAW_ADMIN_UNCONFIGURED") {
+        reply.code(503).send({ error: "OPENCLAW_ADMIN_UNCONFIGURED" });
+        return;
+      }
+      reply.code(502).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.get("/api/stream", async () => {

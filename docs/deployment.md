@@ -24,6 +24,7 @@ The repository includes:
 - `Dockerfile`
 - `compose.yaml`
 - `.env.example`
+- `deploy/openclaw-admin-bridge.service.example`
 - host-level ops scripts under `scripts/`
 
 ## First-Time Setup
@@ -116,6 +117,34 @@ ports:
 ```
 
 This is the repository default. It keeps the app private behind the reverse proxy.
+
+## OpenClaw Service Control
+
+If you want the AgentOS portal to manage Roger's OpenClaw runtime, run the bundled host-side admin bridge on the VPS and let the web container talk to it over `host.docker.internal`.
+
+Required AgentOS env vars:
+
+```text
+AGENTOS_OPENCLAW_ADMIN_URL=http://host.docker.internal:19401
+AGENTOS_OPENCLAW_ADMIN_TOKEN=<shared-secret>
+AGENTOS_OPENCLAW_DASHBOARD_URL=https://roger.example.com
+```
+
+Recommended deployment shape:
+
+1. build the current `agentos-app` release so `dist/src/main-openclaw-admin-bridge.js` exists
+2. copy `deploy/openclaw-admin-bridge.service.example` into:
+   - `~/.config/systemd/user/agentos-openclaw-admin-bridge.service`
+3. replace the token value in the unit file
+4. enable and start it:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now agentos-openclaw-admin-bridge.service
+systemctl --user status agentos-openclaw-admin-bridge.service --no-pager
+```
+
+The bridge should stay host-local. Do not bind it to a public interface.
 
 ## Persistence
 

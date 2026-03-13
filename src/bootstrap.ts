@@ -6,6 +6,7 @@ import { AgentOsKernel } from "./domain/kernel.js";
 import { createPostgresPool, runMigrations, PostgresPersistence } from "./db/postgres.js";
 import { AssistantService } from "./services/assistant-service.js";
 import { AuthService } from "./services/auth-service.js";
+import { OpenClawAdminService } from "./services/openclaw-admin-service.js";
 import { LocalExecutionAdapter } from "./worker/local-execution-adapter.js";
 import { AgentWorker } from "./worker/agent-worker.js";
 import type { AppConfig } from "./shared/types.js";
@@ -15,6 +16,7 @@ export interface AgentOsRuntime {
   kernel: AgentOsKernel;
   assistantService: AssistantService;
   authService: AuthService;
+  openClawAdminService: OpenClawAdminService;
   worker: AgentWorker;
   shutdown(): Promise<void>;
 }
@@ -30,6 +32,7 @@ export async function createInMemoryRuntime(overrides: Partial<AppConfig> = {}):
     kernel,
     assistantService: new AssistantService(kernel),
     authService: new AuthService(config.ownerPassword, config.bridgeToken),
+    openClawAdminService: new OpenClawAdminService(config.openClawAdminUrl, config.openClawAdminToken, config.openClawDashboardUrl),
     worker: new AgentWorker(kernel, new LocalExecutionAdapter(), config),
     shutdown: async () => {},
   };
@@ -50,6 +53,7 @@ export async function createPostgresRuntime(config: AppConfig, pool?: Pool): Pro
     kernel,
     assistantService: new AssistantService(kernel),
     authService: new AuthService(config.ownerPassword, config.bridgeToken),
+    openClawAdminService: new OpenClawAdminService(config.openClawAdminUrl, config.openClawAdminToken, config.openClawDashboardUrl),
     worker: new AgentWorker(kernel, new LocalExecutionAdapter(), config),
     shutdown: async () => {
       await runtimePool.end();

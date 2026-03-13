@@ -311,12 +311,32 @@ export interface ProjectionWatermark {
   updatedAt: string;
 }
 
+export type OpenClawServiceAction = "start" | "stop" | "restart";
+
+export interface OpenClawAdminBridgeStatus {
+  serviceName: string;
+  activeState: string;
+  subState: string;
+  unitFileState: string;
+  mainPid: number | null;
+  startedAt: string | null;
+  fragmentPath: string | null;
+}
+
+export interface OpenClawAdminStatus extends OpenClawAdminBridgeStatus {
+  configured: boolean;
+  dashboardUrl: string | null;
+}
+
 export interface AppConfig {
   databaseUrl: string | null;
   ownerPassword: string;
   cookieSecret: string;
   bridgeToken: string | null;
   publicBaseUrl: string | null;
+  openClawAdminUrl: string | null;
+  openClawAdminToken: string | null;
+  openClawDashboardUrl: string | null;
   heartbeatIntervalMs: number;
   leaseDurationMs: number;
   projectionLagThresholdMs: number;

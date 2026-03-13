@@ -9,6 +9,13 @@ cd /opt/agentos-app
 docker compose ps
 ```
 
+OpenClaw admin bridge:
+
+```bash
+systemctl --user status agentos-openclaw-admin-bridge.service --no-pager
+journalctl --user -u agentos-openclaw-admin-bridge -n 100 --no-pager
+```
+
 Logs:
 
 ```bash
@@ -45,6 +52,7 @@ AGENTOS_PUBLIC_HEALTH_URL=https://app.rogerroger.ai/api/auth/me .agentos-state/b
 - `web` is up and serving on localhost
 - `worker` is up and polling
 - `postgres` is healthy
+- `agentos-openclaw-admin-bridge.service` is active if portal-side OpenClaw control is enabled
 - `Approvals` only shows items when a mission is actually waiting for approval
 - `Overview` and `Mission Detail` reflect current mission state within the projection freshness window
 
@@ -92,6 +100,18 @@ The next operational improvements should be:
 1. off-host backup automation
 2. rollback procedure
 3. minimal uptime / container-health monitoring
+
+## OpenClaw Portal Control
+
+Once the host-side admin bridge is installed, the AgentOS web UI can show:
+
+- OpenClaw service status
+- start
+- stop
+- restart
+- Roger dashboard link
+
+The portal does not talk to `systemctl` directly. It talks to the localhost-only admin bridge with a shared bearer token.
 
 ## Backups
 

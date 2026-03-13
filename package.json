@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:postgres": "vitest run test/postgres.failure-drills.test.ts",
     "test:watch": "vitest",
+    "start:openclaw-admin-bridge": "node dist/src/main-openclaw-admin-bridge.js",
     "start:web": "node dist/src/main-web.js",
     "start:worker": "node dist/src/main-worker.js"
   },

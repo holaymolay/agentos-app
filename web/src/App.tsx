@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes, useNavigate, useParams } from "react-router-dom";
-import { api, type ApprovalQueueItem, type ConversationMessage, type MissionDetail, type MissionSummary, type OverviewHealth } from "./api";
+import {
+  api,
+  type ApprovalQueueItem,
+  type ConversationMessage,
+  type MissionDetail,
+  type MissionSummary,
+  type OpenClawStatus,
+  type OverviewHealth,
+} from "./api";
 
 function formatTime(value: string): string {
   return new Date(value).toLocaleString();
@@ -55,6 +63,7 @@ function ShellLayout(props: {
           <NavLink to="/assistant">Assistant</NavLink>
           <NavLink to="/overview">Overview</NavLink>
           <NavLink to="/approvals">Approvals</NavLink>
+          <NavLink to="/openclaw">OpenClaw</NavLink>
         </nav>
       </aside>
       <main className="content">
@@ -62,6 +71,7 @@ function ShellLayout(props: {
           <Route path="/assistant" element={<AssistantPage recentConversation={props.recentConversation} refresh={props.refresh} />} />
           <Route path="/overview" element={<OverviewPage overviewHealth={props.overviewHealth} missions={props.missions} approvals={props.approvals} />} />
           <Route path="/approvals" element={<ApprovalsPage approvals={props.approvals} refresh={props.refresh} />} />
+          <Route path="/openclaw" element={<OpenClawPage />} />
           <Route path="/missions/:missionId" element={<MissionDetailPage />} />
           <Route path="*" element={<AssistantPage recentConversation={props.recentConversation} refresh={props.refresh} />} />
         </Routes>
@@ -212,6 +222,99 @@ function ApprovalsPage({ approvals, refresh }: { approvals: ApprovalQueueItem[];
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function OpenClawPage() {
+  const [status, setStatus] = useState<OpenClawStatus | null>(null);
+  const [busy, setBusy] = useState<"start" | "stop" | "restart" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadStatus() {
+    setError(null);
+    try {
+      setStatus(await api.getOpenClawStatus());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  useEffect(() => {
+    void loadStatus();
+  }, []);
+
+  async function performAction(action: "start" | "stop" | "restart") {
+    setBusy(action);
+    setError(null);
+    try {
+      setStatus(await api.controlOpenClaw(action));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">OpenClaw</h1>
+          <p className="page-subtitle">Service status and bounded lifecycle control for Roger&apos;s runtime.</p>
+        </div>
+      </header>
+      {error ? <div className="error-text">{error}</div> : null}
+      <div className="detail-grid">
+        <div className="stacked">
+          <div className="detail-card">
+            <div className="row-top">
+              <strong>Service status</strong>
+              <span className="status-pill">{status?.configured ? `${status.activeState} / ${status.subState}` : "unconfigured"}</span>
+            </div>
+            <div className="meta-line">Unit: {status?.serviceName ?? "openclaw-gateway.service"}</div>
+            <div className="meta-line">Unit file: {status?.unitFileState ?? "unknown"}</div>
+            <div className="meta-line">Main PID: {status?.mainPid ?? "n/a"}</div>
+            <div className="meta-line">Started: {status?.startedAt ?? "n/a"}</div>
+            <div className="actions" style={{ marginTop: 14 }}>
+              <button className="primary" disabled={busy !== null || !status?.configured} onClick={() => performAction("start")}>Start</button>
+              <button className="secondary" disabled={busy !== null || !status?.configured} onClick={() => performAction("restart")}>Restart</button>
+              <button className="danger" disabled={busy !== null || !status?.configured} onClick={() => performAction("stop")}>Stop</button>
+              <button className="secondary" disabled={busy !== null} onClick={() => void loadStatus()}>Refresh</button>
+            </div>
+          </div>
+          <div className="detail-card">
+            <strong>Portal wiring</strong>
+            {status?.configured ? (
+              <>
+                <div className="meta-line" style={{ marginTop: 8 }}>Host admin bridge is configured and reachable through AgentOS.</div>
+                {status.dashboardUrl ? (
+                  <div style={{ marginTop: 12 }}>
+                    <a className="inline-link" href={status.dashboardUrl} rel="noreferrer" target="_blank">Open Roger web UI</a>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="empty-state" style={{ marginTop: 12 }}>
+                OpenClaw admin bridge is not configured yet. Set the OpenClaw admin bridge URL and token in AgentOS, then point the web container at the host bridge.
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="stacked">
+          <div className="detail-card">
+            <strong>What this controls</strong>
+            <div className="meta-line" style={{ marginTop: 8 }}>
+              These actions only manage the host OpenClaw gateway service. They do not replace Mission Control, and they do not grant arbitrary shell access from the portal.
+            </div>
+          </div>
+          <div className="detail-card">
+            <strong>Bridge details</strong>
+            <div className="meta-line" style={{ marginTop: 8 }}>Fragment path: {status?.fragmentPath ?? "n/a"}</div>
+            <div className="meta-line">Dashboard URL: {status?.dashboardUrl ?? "not configured"}</div>
+          </div>
+        </div>
       </div>
     </div>
   );

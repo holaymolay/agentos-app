@@ -48,6 +48,18 @@ export interface OverviewHealth {
   updatedAt: string;
 }
 
+export interface OpenClawStatus {
+  configured: boolean;
+  serviceName: string;
+  activeState: string;
+  subState: string;
+  unitFileState: string;
+  mainPid: number | null;
+  startedAt: string | null;
+  fragmentPath: string | null;
+  dashboardUrl: string | null;
+}
+
 export interface MissionDetail {
   mission: Record<string, unknown> & { missionId: string; status: string; summary: string; riskTier: string };
   steps: Array<Record<string, unknown> & { stepId: string; stepKey: string; status: string }>;
@@ -107,6 +119,14 @@ export const api = {
     return request(`/api/approvals/${approvalRequestId}/resolve`, {
       method: "POST",
       body: JSON.stringify({ decision }),
+    });
+  },
+  getOpenClawStatus() {
+    return request<OpenClawStatus>("/api/openclaw/status");
+  },
+  controlOpenClaw(action: "start" | "stop" | "restart") {
+    return request<OpenClawStatus>(`/api/openclaw/${action}`, {
+      method: "POST",
     });
   },
 };
